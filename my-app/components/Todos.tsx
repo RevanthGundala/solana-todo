@@ -24,7 +24,7 @@ type Todo = {
   completed: boolean;
 };
 
-export default function Component() {
+export default function Todos() {
   const [todos, setTodos] = useState<Todo[]>([
     {
       id: 1,
