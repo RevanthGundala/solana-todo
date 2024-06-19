@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("8w84Se5FmzKzzQCYa7GuehiEtv2VMt8PG7cG27ADTzSK");
-
+declare_id!("9pXHHqYqYvUn1M7rqFVG7WJXZWez9ZDBgkoTCsQPLdM8");
 #[program]
 pub mod todo_app {
     use super::*;
@@ -12,7 +11,7 @@ pub mod todo_app {
         Ok(())
     }
 
-    pub fn add_todo(ctx: Context<AddTodo>, title: String, description: String, due_date: String) -> Result<u64> {
+    pub fn add_todo(ctx: Context<AddTodo>, title: String, description: String, due_date: String) -> Result<()> {
         let user_account = &mut ctx.accounts.user_account;
         let id = user_account.todos.len() as u64;
         let todo = Todo {
@@ -23,7 +22,7 @@ pub mod todo_app {
             is_completed: false,
         };
         user_account.todos.push(todo);
-        Ok(id)
+        Ok(())
     }
 
     pub fn update_todo(ctx: Context<UpdateTodo>, id: u64, title: Option<String>, description: Option<String>, due_date: Option<String>, is_completed: Option<bool>) -> Result<()> {
@@ -38,7 +37,9 @@ pub mod todo_app {
 
     pub fn delete_todo(ctx: Context<DeleteTodo>, id: u64) -> Result<()> {
         let user_account = &mut ctx.accounts.user_account;
+        msg!("id: {}", id);
         let index = user_account.todos.iter().position(|t| t.id == id).ok_or(ErrorCode::TodoNotFound)?;
+        msg!("index: {}", index);
         user_account.todos.remove(index);
         Ok(())
     }
@@ -46,7 +47,7 @@ pub mod todo_app {
 
 #[derive(Accounts)]
 pub struct InitializeUser<'info> {
-    #[account(init, payer = user, space = 8 + 8 * 10, seeds=[b"user_account", user.key().as_ref()], bump)]
+    #[account(init, payer = user, space = 8 + 1024, seeds=[b"user_account", user.key().as_ref()], bump)]
     pub user_account: Account<'info, UserAccount>,
     #[account(mut)]
     pub user: Signer<'info>,
@@ -56,20 +57,26 @@ pub struct InitializeUser<'info> {
 
 #[derive(Accounts)]
 pub struct AddTodo<'info> {
-    #[account(mut, seeds=[b"user_account", user_account.key().as_ref()], bump)]
+    #[account(mut, seeds=[b"user_account", user.key().as_ref()], bump)]
     pub user_account: Account<'info, UserAccount>,
-} 
+    #[account(mut)]
+    pub user: Signer<'info>,
+}
 
 #[derive(Accounts)]
 pub struct UpdateTodo<'info> {
-    #[account(mut, seeds=[b"user_account", user_account.key().as_ref()], bump)]
+    #[account(mut, seeds=[b"user_account", user.key().as_ref()], bump)]
     pub user_account: Account<'info, UserAccount>,
+    #[account(mut)]
+    pub user: Signer<'info>,
 }
 
 #[derive(Accounts)]
 pub struct DeleteTodo<'info> {
-    #[account(mut, seeds=[b"user_account", user_account.key().as_ref()], bump)]
+    #[account(mut, seeds=[b"user_account", user.key().as_ref()], bump)]
     pub user_account: Account<'info, UserAccount>,
+    #[account(mut)]
+    pub user: Signer<'info>,
 }
 
 #[account]
