@@ -10,26 +10,28 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-
-import { program } from "@/utils/anchor/setup";
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { BN } from "@coral-xyz/anchor";
 import { createClient } from "@/utils/supabase/client";
 import { PublicKey } from "@solana/web3.js";
-import { TodoAppData } from "@/utils/anchor/setup";
+import { useProgram } from "@/utils/hooks/useProgram";
+import { TodoApp } from "../../todo_app/target/types/todo_app";
+import { IdlAccounts } from "@coral-xyz/anchor";
+
+const INVALID_ID: BN = new BN(Number.MAX_SAFE_INTEGER);
+
+type Todo = IdlAccounts<TodoApp>["userAccount"]["todos"][0];
 
 export default function Todos() {
-  const { publicKey, sendTransaction } = useWallet();
-  const { connection } = useConnection();
+  const { program, publicKey, isConnected, provider } = useProgram();
   const supabase = createClient();
-  const [todos, setTodos] = useState<TodoAppData[]>([]);
-  const [newTodo, setNewTodo] = useState<TodoAppData>({
-    id: new BN(0),
+
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [newTodo, setNewTodo] = useState<Todo>({
+    id: INVALID_ID,
     title: "",
     description: "",
     dueDate: "",
@@ -38,56 +40,47 @@ export default function Todos() {
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    if (!publicKey) return;
+    if (!isConnected) return;
     const fetchTodos = async () => {
-      // const { data: todos, error } = await supabase
-      //   .from("todos")
-      //   .select("todo_id,public_key");
-      // // TODO:
-      // console.log(todos);
-      // if (error) console.error(error);
-      // const userTodoIds = todos?.filter(
-      //   (todo) => todo.public_key === publicKey.toString()
-      // );
       const [userAccountPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("user_account"), publicKey.toBuffer()],
+        [Buffer.from("user_account"), (publicKey as PublicKey).toBuffer()],
         program.programId
       );
-      const userAccount = await program.account.userAccount.fetch(
-        userAccountPda
-      );
-      setTodos(userAccount.todos);
+      try {
+        const userAccount = await program.account.userAccount.fetch(
+          userAccountPda
+        );
+        setTodos(
+          userAccount.todos.sort((a, b) => {
+            if (a.isCompleted && !b.isCompleted) {
+              return 1;
+            } else if (!a.isCompleted && b.isCompleted) {
+              return -1;
+            } else {
+              return 0;
+            }
+          })
+        );
+      } catch (error) {
+        console.error(error);
+        const tx = await program.methods.initializeUser().transaction();
+        const txReceipt = await provider.sendAndConfirm(tx);
+        console.log(txReceipt);
+      }
     };
     fetchTodos();
   }, [publicKey, todos]);
 
-  const handleAddTodo = async () => {
+  const handleUpdateTodo = async (todo: Todo) => {
     if (newTodo.title.trim() !== "") {
-      let tx;
-      const { id, title, description, dueDate, isCompleted } = newTodo;
-      if (id) {
-        // Update todo call
-        tx = await program.methods
-          .updateTodo(new BN(id!), title, description, dueDate, isCompleted)
-          .transaction();
-      } else {
-        // Add todo call
-        tx = await program.methods
-          .addTodo(title, description, dueDate)
-          .transaction();
-      }
-      const txReceipt = await sendTransaction(tx, connection);
+      const { id, title, description, dueDate, isCompleted } = todo;
+      const tx = await program.methods
+        .updateTodo(new BN(id), title, description, dueDate, isCompleted)
+        .transaction();
+      const txReceipt = await provider.sendAndConfirm(tx);
       console.log(txReceipt);
-      // TODO: Update the todos state with the new todo id
-      const updated_id = new BN(0);
-      const { error } = await supabase
-        .from("todos")
-        .upsert([{ todo_id: updated_id, public_key: publicKey?.toString() }])
-        .select();
-      if (error) console.error(error);
-
       setNewTodo({
-        id: new BN(0),
+        id: INVALID_ID,
         title: "",
         description: "",
         dueDate: "",
@@ -96,29 +89,45 @@ export default function Todos() {
       setShowModal(false);
     }
   };
-  const handleToggleTodo = (id: BN) => {
-    setTodos(
-      todos
-        .map((todo) =>
-          todo.id === id ? { ...todo, completed: !todo.isCompleted } : todo
-        )
-        .sort((a, b) => {
-          if (a.isCompleted && !b.isCompleted) {
-            return 1;
-          } else if (!a.isCompleted && b.isCompleted) {
-            return -1;
-          } else {
-            return 0;
-          }
-        })
-    );
+
+  const handleAddTodo = async () => {
+    if (newTodo.title.trim() !== "") {
+      const { title, description, dueDate } = newTodo;
+      const tx = await program.methods
+        .addTodo(title, description, dueDate)
+        .transaction();
+
+      const txReceipt = await provider.sendAndConfirm(tx);
+      console.log(txReceipt);
+      // TODO: Update the todos state with the new todo id
+      // const updated_id = new BN(0);
+      // const { error } = await supabase
+      //   .from("todos")
+      //   .upsert([{ todo_id: updated_id, public_key: publicKey?.toString() }])
+      //   .select();
+      // if (error) console.error(error);
+
+      setNewTodo({
+        id: INVALID_ID,
+        title: "",
+        description: "",
+        dueDate: "",
+        isCompleted: false,
+      });
+      setShowModal(false);
+    }
+  };
+  const handleToggleTodo = async (id: BN) => {
+    let todo = todos.find((todo) => todo.id === id)!;
+    todo = { ...todo, isCompleted: true };
+    await handleUpdateTodo(todo);
   };
   const handleDeleteTodo = async (id: BN) => {
     const tx = await program.methods.deleteTodo(new BN(id)).transaction();
-    const txReceipt = await sendTransaction(tx, connection);
+    const txReceipt = await provider.sendAndConfirm(tx);
     console.log(txReceipt);
   };
-  const handleEditTodo = (todo: TodoAppData) => {
+  const handleEditTodo = (todo: Todo) => {
     setNewTodo(todo);
     setShowModal(true);
   };
@@ -196,10 +205,10 @@ export default function Todos() {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>
-              {newTodo.id ? "Edit Todo" : "Add a New Todo"}
+              {newTodo.id !== INVALID_ID ? "Edit Todo" : "Add a New Todo"}
             </DialogTitle>
             <DialogDescription>
-              {newTodo.id
+              {newTodo.id !== INVALID_ID
                 ? "Update the details for this todo."
                 : "Fill out the details for your new todo."}
             </DialogDescription>
@@ -247,8 +256,15 @@ export default function Todos() {
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" onClick={handleAddTodo}>
-              {newTodo.id ? "Update Todo" : "Add Todo"}
+            <Button
+              type="button"
+              onClick={async () =>
+                newTodo.id !== INVALID_ID
+                  ? await handleUpdateTodo(newTodo)
+                  : await handleAddTodo()
+              }
+            >
+              {newTodo.id !== INVALID_ID ? "Update Todo" : "Add Todo"}
             </Button>
             <div>
               <Button type="button" variant="outline">

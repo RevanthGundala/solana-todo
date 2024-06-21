@@ -5,11 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { useEffect, useState } from "react";
-import {
-  WalletModalButton,
-  WalletMultiButton,
-} from "@solana/wallet-adapter-react-ui";
-
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 export default function Navbar() {
   const router = useRouter();
   const supabase = createClient();
@@ -19,8 +15,7 @@ export default function Navbar() {
     const getSession = async () => {
       try {
         const { data } = await supabase.auth.getSession();
-        console.log(data);
-        data.session ? setSignedIn(true) : setSignedIn(false);
+        setSignedIn(data.session ? true : false);
       } catch (error) {
         console.error(error);
       }
@@ -30,7 +25,6 @@ export default function Navbar() {
 
   const logOut = async () => {
     try {
-      console.log("signing out");
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error("Error signing out:", error.message);
@@ -52,7 +46,10 @@ export default function Navbar() {
         <span className="text-lg font-semibold">Todo App</span>
       </Link>
       <div className="flex items-center gap-2">
-        {signedIn ? (
+        {signedIn === null ? (
+          // Render a placeholder or loading state initially
+          <div className="text-white">Loading...</div>
+        ) : signedIn ? (
           <Button onClick={logOut} variant="ghost" className="text-white">
             Sign Out
           </Button>
@@ -60,7 +57,7 @@ export default function Navbar() {
           <Button
             onClick={() => router.push("/login")}
             variant="ghost"
-            className="text-white "
+            className="text-white"
           >
             Sign In
           </Button>
