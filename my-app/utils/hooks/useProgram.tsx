@@ -2,8 +2,8 @@ import { useAnchorWallet, AnchorWallet } from "@solana/wallet-adapter-react";
 import { AnchorProvider } from "@coral-xyz/anchor";
 import { useConnection } from "@solana/wallet-adapter-react";
 import { Program } from "@coral-xyz/anchor";
-import idl from "../../../todo_app/target/idl/todo_app.json";
-import { TodoApp } from "../../../todo_app/target/types/todo_app";
+import idl from "../idl/todo_app.json";
+import { TodoApp } from "../types/todo_app";
 
 export function useProgram() {
   let isConnected = false;

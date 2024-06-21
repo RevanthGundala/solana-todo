@@ -18,7 +18,7 @@ import { BN } from "@coral-xyz/anchor";
 import { createClient } from "@/utils/supabase/client";
 import { PublicKey } from "@solana/web3.js";
 import { useProgram } from "@/utils/hooks/useProgram";
-import { TodoApp } from "../../todo_app/target/types/todo_app";
+import { TodoApp } from "@/utils/types/todo_app";
 import { IdlAccounts } from "@coral-xyz/anchor";
 
 const INVALID_ID: BN = new BN(Number.MAX_SAFE_INTEGER);
