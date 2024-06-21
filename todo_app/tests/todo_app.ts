@@ -113,4 +113,18 @@ describe("todo_app", () => {
 
     assert.lengthOf(userAccount.todos, 1);
   });
+
+  it("Deletes Todo", async () => {
+    const userAccount = await program.account.userAccount.fetch(userAccountPda);
+    await program.methods
+      .deleteTodo(new anchor.BN(0))
+      .accounts({
+        userAccount: userAccountPda,
+        user: user.publicKey,
+      })
+      .signers([user])
+      .rpc();
+
+    assert.lengthOf(userAccount.todos, 0);
+  });
 });

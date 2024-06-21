@@ -1,7 +1,7 @@
 import { Inter as FontSans } from "next/font/google";
 import "./globals.css";
-
 import { cn } from "@/lib/utils";
+import { SolProvider } from "@/components/SolProvider";
 
 const fontSans = FontSans({
   subsets: ["latin"],
@@ -22,7 +22,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           fontSans.variable
         )}
       >
-        {children}
+        <SolProvider>{children}</SolProvider>
       </body>
     </html>
   );

@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { useEffect, useState } from "react";
+import {
+  WalletModalButton,
+  WalletMultiButton,
+} from "@solana/wallet-adapter-react-ui";
 
 export default function Navbar() {
   const router = useRouter();
@@ -61,10 +65,7 @@ export default function Navbar() {
             Sign In
           </Button>
         )}
-
-        <Button variant="outline" className="text-white hover:bg-gray-800">
-          Connect Wallet
-        </Button>
+        <WalletMultiButton />
       </div>
     </header>
   );
