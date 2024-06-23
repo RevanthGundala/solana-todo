@@ -72,22 +72,24 @@ export default function Todos() {
   }, [publicKey, todos]);
 
   const handleUpdateTodo = async (todo: Todo) => {
-    if (newTodo.title.trim() !== "") {
-      const { id, title, description, dueDate, isCompleted } = todo;
-      const tx = await program.methods
-        .updateTodo(new BN(id), title, description, dueDate, isCompleted)
-        .transaction();
-      const txReceipt = await provider.sendAndConfirm(tx);
-      console.log(txReceipt);
-      setNewTodo({
-        id: INVALID_ID,
-        title: "",
-        description: "",
-        dueDate: "",
-        isCompleted: false,
-      });
-      setShowModal(false);
-    }
+    console.log("updating...", todo);
+
+    const { id, title, description, dueDate, isCompleted } = todo;
+    console.log("here");
+    const tx = await program.methods
+      .updateTodo(id, title, description, dueDate, isCompleted)
+      .transaction();
+    console.log(tx);
+    const txReceipt = await provider.sendAndConfirm(tx);
+    console.log(txReceipt);
+    setNewTodo({
+      id: INVALID_ID,
+      title: "",
+      description: "",
+      dueDate: "",
+      isCompleted: false,
+    });
+    setShowModal(false);
   };
 
   const handleAddTodo = async () => {
@@ -117,9 +119,9 @@ export default function Todos() {
       setShowModal(false);
     }
   };
-  const handleToggleTodo = async (id: BN) => {
-    let todo = todos.find((todo) => todo.id === id)!;
+  const handleToggleTodo = async (todo: Todo) => {
     todo = { ...todo, isCompleted: true };
+    console.log(todo);
     await handleUpdateTodo(todo);
   };
   const handleDeleteTodo = async (id: BN) => {
@@ -150,7 +152,7 @@ export default function Todos() {
               <Checkbox
                 id={`todo-${todo.id}`}
                 checked={todo.isCompleted}
-                onCheckedChange={() => handleToggleTodo(todo.id!)}
+                onCheckedChange={() => handleToggleTodo(todo)}
               />
               <div>
                 <h3
